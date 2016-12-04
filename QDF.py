@@ -131,6 +131,7 @@ def gen_top5_predictor(test_vector, train_result_para):
         #                 - math.log(np.linalg.det(category_cov[cate_num])))
 
     # 排序
+    print(pro_list)
     pro_top5_indices = np.argsort(pro_list)[::-1][:5]
     return pro_top5_indices
 
@@ -162,9 +163,9 @@ def main():
     # print(test_label.shape)
     # print(test_feature.shape)
     # beta = np.linspace (0, 0.05, 5)
-    gamma = np.linspace (0, 0.03, 5)
+    # gamma = np.linspace (0, 0.03, 5)
     beta = [0]
-    # gamma = [0.001]
+    gamma = [0]
 
     t1 = 0
     b_v = 0
@@ -186,13 +187,13 @@ def main():
     print(t1/ 4000)
     print(b_v)
     print(g_v)
-    # print(top1)
-    # print(top3)
-    # print(top5)
+    print(top1)
+    print(top3)
+    print(top5)
     #
-    # print(top1 / 4000)
-    # print(top3 / 4000)
-    # print(top5 / 4000)
+    print(top1 / 4000)
+    print(top3 / 4000)
+    print(top5 / 4000)
 
 
-main()
+# main()

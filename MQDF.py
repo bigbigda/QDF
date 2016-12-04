@@ -1,63 +1,90 @@
 import numpy as np
-import QDF from .
-
-def gen_category_prob(data_list, train_label):
-    category_prob = []
-    for i in range(len(data_list)):
-        category_prob.append(data_list[i].shape[0] / train_label.shape[0])
-    return category_prob
+import math
+import QDF
 
 
-def gen_mean_vector(data_list):
-    category_mean = []
-    for i in range(len(data_list)):
-        category_mean.append(data_list[i].mean(axis=0))
-    return category_mean
-
-
-def gen_sigma_vector_qdf(data_list, category_prob):
+def gen_eigs(data_list, category_prob):
     category_cov = []
     for data in data_list:
         tmp_cov_matrix = np.cov(data, rowvar=False, bias=True)
-        # print (type(tmp_cov_matrix))
         category_cov.append(tmp_cov_matrix)
 
-    # 以下为RDA分类器的协方差矩阵平滑部分
+    # 以下为计算出协方差矩阵的特征值和特征向量
     # 计算sigma0
-    sigma0 = np.zeros(shape=(16, 16))
-    tmp = 0
+    eig_value = []
+    eig_vector = []
     for i in range(len(data_list)):
-        sigma0 = category_cov[i] * category_prob[i] + sigma0
-        tmp = category_prob[i] + tmp
-
+        (value, matrix) = np.linalg.eig(category_cov[i])
+        sort_indices = np.argsort(value)
+        sorted_value = value[sort_indices]
+        sorted_matrix = matrix[:, sort_indices]
+        eig_value.append(sorted_value)
+        eig_vector.append(sorted_matrix)
     # return category_cov
-    return category_cov
-
-
-def gen_sigma_vector_ldf(data):
-    category_cov = []
-    tmp_cov_matrix = np.cov(data, rowvar=False, bias=True)
-    # print (type(tmp_cov_matrix))
-    for i in range(26):
-        category_cov.append(tmp_cov_matrix)
-
-    return category_cov
+    return eig_value, eig_vector
 
 
 # 由训练集得出所有参数
-def gen_para_list(train_feature, train_label):
+def gen_mqdf_para_list(train_feature, train_label):
     data_list = QDF.do_data_split(train_feature, train_label, 26)
 
-    category_prob = gen_category_prob(data_list, train_label)
-    category_mean = gen_mean_vector(data_list)
-    category_cov = gen_sigma_vector_qdf(data_list, category_prob)
+    category_prob = QDF.gen_category_prob(data_list, train_label)
+    category_mean = QDF.gen_mean_vector(data_list)
+    (eig_value, eig_vector) = gen_eigs(data_list, category_prob)
+    print(eig_vector[1].shape)
+    print(eig_value[1].shape)
     # category_cov = gen_sigma_vector_ldf(train_feature)
 
-    return category_prob, category_mean, category_cov
+    return category_prob, category_mean, eig_value, eig_vector
 
-def main():
+
+def gen_mqdf_top5_predictor(test_vector, train_result_para):
+    category_prob = train_result_para[0]
+    category_mean = train_result_para[1]
+    category_eig_value = train_result_para[2]
+    category_eig_vector = train_result_para[3]
+    pro_list = []
+    for cate_num in range(len(category_prob)):
+        tmp_pro = 0
+        distinc_num = 13
+        for i in range(distinc_num):
+            # print(i)
+            # if i == 1:
+            #     print(np.dot(test_vector - category_mean[cate_num][i], category_eig_vector[cate_num][:, i]))
+            #     print(np.dot(test_vector - category_mean[cate_num][i], category_eig_vector[cate_num][:, i]) ** 2)
+            # tmp_pro = tmp_pro - math.log(category_eig_value[cate_num][i])
+            tmp_pro = tmp_pro - ((np.dot(test_vector - category_mean[cate_num], category_eig_vector[cate_num][:, i])
+                                  ** 2) / category_eig_value[cate_num][i]) - math.log(category_eig_value[cate_num][i])
+        for j in range (distinc_num, 16):
+            tmp_pro = tmp_pro - ((np.dot(test_vector - category_mean[cate_num], category_eig_vector[cate_num][:, j])
+                                  ** 2) / category_eig_value[cate_num][distinc_num]) -\
+                                    math.log(category_eig_value[cate_num][distinc_num])
+        pro_list.append(tmp_pro)
+        # QDF方法
+        #
+        # pro_list.append(-(test_vector - category_mean[cate_num]) @ (
+        #     np.linalg.inv(category_cov[cate_num])) @ (test_vector - category_mean[cate_num])
+        #                 - math.log(np.linalg.det(category_cov[cate_num])))
+
+    # 排序
+    # print("begin:")
+    # print(pro_list)
+    pro_top5_indices = np.argsort(pro_list)[::-1][:5]
+    return pro_top5_indices
+
+
+def gen_mqdf_predict_pro(to_be_test_array, train_result_para):
+    predict_top5_indices_list = []
+    # 由训练后的网络的出预测结果
+    for test_sample_num in range(to_be_test_array.shape[0]):
+        predict_top5_indices_list.append(gen_mqdf_top5_predictor(to_be_test_array[test_sample_num], train_result_para))
+
+    return predict_top5_indices_list
+
+
+def main1():
     print("#################################")
-    print('hello python!')
+    print('hello python MQDF!')
 
     train_data = np.genfromtxt('D:\\work\\JavaWorkspace\\eclipsePython\\src\\Letter\\train.txt', delimiter=',')
     test_data = np.genfromtxt('D:\\work\\JavaWorkspace\\eclipsePython\\src\\Letter\\test.txt', delimiter=',')
@@ -73,7 +100,7 @@ def main():
     # print(test_label.shape)
     # print(test_feature.shape)
     # beta = np.linspace (0, 0.05, 5)
-    gamma = np.linspace (0, 0.03, 5)
+    gamma = np.linspace(0, 0.03, 5)
     beta = [0]
     # gamma = [0.001]
 
@@ -83,25 +110,16 @@ def main():
     count = 0
 
     train_result_para = gen_mqdf_para_list(train_feature, train_label)
-    predict_top5_pro = QDF.gen_predict_pro(test_feature, train_result_para)
+    predict_top5_pro = gen_mqdf_predict_pro(test_feature, train_result_para)
     (top1, top3, top5) = QDF.gen_final_sum(predict_top5_pro, test_label)
-    if top1 > t1:
-        t1 = top1
-        b_v = beta[i]
-        g_v = gamma[j]
-    print(top1/4000)
 
-
-    print(t1/ 4000)
-    print(b_v)
-    print(g_v)
-    # print(top1)
-    # print(top3)
-    # print(top5)
+    print(top1)
+    print(top3)
+    print(top5)
     #
-    # print(top1 / 4000)
-    # print(top3 / 4000)
-    # print(top5 / 4000)
+    print(top1 / 4000)
+    print(top3 / 4000)
+    print(top5 / 4000)
 
 
-main()
+main1()
