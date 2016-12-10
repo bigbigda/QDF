@@ -3,6 +3,7 @@ import math
 import ldf_qdf
 import basic_common_operation
 
+
 def gen_eigs(data_list, category_prob):
     category_cov = []
     for data in data_list:

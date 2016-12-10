@@ -44,3 +44,25 @@ def show_top_pro_result(top1, top3, top5, num_of_test_set):
     print(top1 / num_of_test_set)
     print(top3 / num_of_test_set)
     print(top5 / num_of_test_set)
+
+
+# 将训练集各个类的ndarry类型数据存入list
+def generate_class_data(feature_ndarr, label_ndarr, label_to_find):
+    index = (np.where(label_ndarr == label_to_find))
+    return feature_ndarr[index]
+
+
+def do_data_split(feature_ndarr, label_ndarr, category_num):
+    category_list = []
+    for i in range(category_num):
+        tmp_array = generate_class_data(feature_ndarr, label_ndarr, i)
+        category_list.append(tmp_array)
+    return category_list
+
+
+def gen_mean_vector(data_list):
+    category_mean = []
+    for i in range(len(data_list)):
+        category_mean.append(data_list[i].mean(axis=0))
+    return category_mean
+

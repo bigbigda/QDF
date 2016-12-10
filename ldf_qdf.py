@@ -6,32 +6,12 @@ import basic_common_operation
 # f = open("D:\\work\\JavaWorkspace\\eclipsePython\\src\\Letter\\train.txt", 'r')
 
 
-# 将训练集各个类的ndarry类型数据存入list
-def generate_class_data(feature_ndarr, label_ndarr, label_to_find):
-    index = (np.where(label_ndarr == label_to_find))
-    return feature_ndarr[index]
-
-
-def do_data_split(feature_ndarr, label_ndarr, category_num):
-    category_list = []
-    for i in range(category_num):
-        tmp_array = generate_class_data(feature_ndarr, label_ndarr, i)
-        category_list.append(tmp_array)
-    return category_list
-
-
 def gen_category_prob(data_list, train_label):
     category_prob = []
     for i in range(len(data_list)):
         category_prob.append(data_list[i].shape[0] / train_label.shape[0])
     return category_prob
 
-
-def gen_mean_vector(data_list):
-    category_mean = []
-    for i in range(len(data_list)):
-        category_mean.append(data_list[i].mean(axis=0))
-    return category_mean
 
 
 def gen_sigma_vector_rda(data_list, category_prob, beta, gamma):
@@ -81,7 +61,7 @@ def gen_sigma_vector_ldf(data, category_num):
 
 # 由训练集得出所有参数
 def gen_para_list(train_feature, train_label, category_num, beta, gamma):
-    data_list = do_data_split(train_feature, train_label, category_num)
+    data_list = basic_common_operation.do_data_split(train_feature, train_label, category_num)
 
     category_prob = gen_category_prob(data_list, train_label)
     category_mean = gen_mean_vector(data_list)
